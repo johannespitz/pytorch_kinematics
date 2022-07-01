@@ -51,6 +51,16 @@ def calc_jacobian(serial_chain, th, tool=None):
                     + cur_transform[:, 1, 2] * cur_transform[:, 0, 3],
                 ]
             ).transpose(0, 1)
+            # d = torch.stack(
+            #     [
+            #         -cur_transform[:, 0, 0] * cur_transform[:, 2, 3]
+            #         + cur_transform[:, 1, 0] * cur_transform[:, 1, 3],
+            #         -cur_transform[:, 0, 2] * cur_transform[:, 0, 3]
+            #         + cur_transform[:, 1, 2] * cur_transform[:, 2, 3],
+            #         -cur_transform[:, 0, 1] * cur_transform[:, 1, 3]
+            #         + cur_transform[:, 1, 1] * cur_transform[:, 0, 3],
+            #     ]
+            # ).transpose(0, 1)
             delta = cur_transform[:, 2, 0:3]
             j_fl[:, :, -cnt] = torch.cat((d, delta), dim=-1)
         elif f.joint.joint_type == "prismatic":
