@@ -77,7 +77,11 @@ def property(method):  # pylint: disable=redefined-builtin
             err_type, err, tb = sys.exc_info()
             tb_next = tb.tb_next
             if isinstance(err, AttributeError):
-                self._last_attribute_error = err_type, err, tb_next  # pylint: disable=protected-access
+                self._last_attribute_error = (
+                    err_type,
+                    err,
+                    tb_next,
+                )  # pylint: disable=protected-access
             six.reraise(err_type, err, tb_next)
 
     return _raw_property(_mjcf_property)
@@ -85,10 +89,10 @@ def property(method):  # pylint: disable=redefined-builtin
 
 def _make_element(spec, parent, attributes=None):
     """Helper function to generate the right kind of Element given a spec."""
-    if (spec.name == constants.WORLDBODY
-            or (spec.name == constants.SITE
-                and (parent.tag == constants.BODY
-                     or parent.tag == constants.WORLDBODY))):
+    if spec.name == constants.WORLDBODY or (
+        spec.name == constants.SITE
+        and (parent.tag == constants.BODY or parent.tag == constants.WORLDBODY)
+    ):
         return _AttachableElement(spec, parent, attributes)
     elif isinstance(parent, _AttachmentFrame):
         return _AttachmentFrameChild(spec, parent, attributes)
@@ -100,16 +104,29 @@ def _make_element(spec, parent, attributes=None):
         return _ElementImpl(spec, parent, attributes)
 
 
-_DEFAULT_NAME_FROM_FILENAME = frozenset(['mesh', 'hfield', 'texture'])
+_DEFAULT_NAME_FROM_FILENAME = frozenset(["mesh", "hfield", "texture"])
 
 
 class _ElementImpl(base.Element):
     """Actual implementation of a generic MJCF element object."""
-    __slots__ = ['__weakref__', '_spec', '_parent', '_attributes', '_children',
-                 '_own_attributes', '_attachments', '_is_removed', '_init_stack',
-                 '_is_worldbody', '_cached_namescope', '_cached_root',
-                 '_cached_full_identifier', '_cached_revision',
-                 '_last_attribute_error']
+
+    __slots__ = [
+        "__weakref__",
+        "_spec",
+        "_parent",
+        "_attributes",
+        "_children",
+        "_own_attributes",
+        "_attachments",
+        "_is_removed",
+        "_init_stack",
+        "_is_worldbody",
+        "_cached_namescope",
+        "_cached_root",
+        "_cached_full_identifier",
+        "_cached_revision",
+        "_last_attribute_error",
+    ]
 
     def __init__(self, spec, parent, attributes=None):
         attributes = attributes or {}
@@ -117,12 +134,14 @@ class _ElementImpl(base.Element):
         # For certain `asset` elements the `name` attribute can be omitted, in which
         # case the name will be the filename without the leading path and extension.
         # See http://www.mujoco.org/book/XMLreference.html#asset.
-        if ('name' not in attributes
-                and 'file' in attributes
-                and spec.name in _DEFAULT_NAME_FROM_FILENAME):
-            _, filename = os.path.split(attributes['file'])
+        if (
+            "name" not in attributes
+            and "file" in attributes
+            and spec.name in _DEFAULT_NAME_FROM_FILENAME
+        ):
+            _, filename = os.path.split(attributes["file"])
             basename, _ = os.path.splitext(filename)
-            attributes['name'] = basename
+            attributes["name"] = basename
 
         self._spec = spec
         self._parent = parent
@@ -131,12 +150,12 @@ class _ElementImpl(base.Element):
         self._children = []
         self._attachments = collections.OrderedDict()
         self._is_removed = False
-        self._is_worldbody = (self.tag == 'worldbody')
+        self._is_worldbody = self.tag == "worldbody"
 
         if self._parent:
             self._cached_namescope = self._parent.namescope
             self._cached_root = self._parent.root
-        self._cached_full_identifier = ''
+        self._cached_full_identifier = ""
         self._cached_revision = -1
 
         self._last_attribute_error = None
@@ -162,15 +181,19 @@ class _ElementImpl(base.Element):
                 # via another attribute. We therefore have to set things up for
                 # the additional indirection.
                 if attribute_spec.type is attribute_types.Reference:
-                    reference_namespace = (
-                        attribute_spec.other_kwargs['reference_namespace'])
+                    reference_namespace = attribute_spec.other_kwargs[
+                        "reference_namespace"
+                    ]
                     if reference_namespace.startswith(
-                            constants.INDIRECT_REFERENCE_NAMESPACE_PREFIX):
+                        constants.INDIRECT_REFERENCE_NAMESPACE_PREFIX
+                    ):
                         attribute_spec = copy.deepcopy(attribute_spec)
                         namespace_attrib_name = reference_namespace[
-                                                len(constants.INDIRECT_REFERENCE_NAMESPACE_PREFIX):]
-                        attribute_spec.other_kwargs['reference_namespace'] = (
-                            self._attributes[namespace_attrib_name])
+                            len(constants.INDIRECT_REFERENCE_NAMESPACE_PREFIX) :
+                        ]
+                        attribute_spec.other_kwargs[
+                            "reference_namespace"
+                        ] = self._attributes[namespace_attrib_name]
                 if attribute_spec.name in attributes:
                     value = attributes[attribute_spec.name]
                 try:
@@ -179,16 +202,19 @@ class _ElementImpl(base.Element):
                         required=attribute_spec.required,
                         conflict_allowed=attribute_spec.conflict_allowed,
                         conflict_behavior=attribute_spec.conflict_behavior,
-                        parent=self, value=value, **attribute_spec.other_kwargs)
+                        parent=self,
+                        value=value,
+                        **attribute_spec.other_kwargs
+                    )
                 except:  # pylint: disable=bare-except
                     # On failure, clear attributes already created
                     for attribute_obj in six.itervalues(self._attributes):
                         attribute_obj._force_clear()  # pylint: disable=protected-access
                     # Then raise a meaningful error
                     err_type, err, traceback = sys.exc_info()
-                    message = (
-                        'during initialization of attribute {!r} of element <{}>: {}'
-                            .format(attribute_spec.name, self._spec.name, err))
+                    message = "during initialization of attribute {!r} of element <{}>: {}".format(
+                        attribute_spec.name, self._spec.name, err
+                    )
                     six.reraise(err_type, err_type(message), traceback)
 
     def get_init_stack(self):
@@ -199,8 +225,11 @@ class _ElementImpl(base.Element):
     def get_last_modified_stacks_for_all_attributes(self):
         """Gets a dict of stack traces where each attribute was last modified."""
         return collections.OrderedDict(
-            [(name, self._attributes[name].last_modified_stack)
-             for name in six.iterkeys(self._spec.attributes)])
+            [
+                (name, self._attributes[name].last_modified_stack)
+                for name in six.iterkeys(self._spec.attributes)
+            ]
+        )
 
     def is_same_as(self, other):
         """Checks whether another element is semantically equivalent to this one.
@@ -242,9 +271,11 @@ class _ElementImpl(base.Element):
             elif not np.all(attribute.value == other_attribute):
                 return False
 
-        if (self._parent and
-                self._parent.tag == constants.TENDON and
-                self._parent.parent == self.root):
+        if (
+            self._parent
+            and self._parent.tag == constants.TENDON
+            and self._parent.parent == self.root
+        ):
             return self._tendon_has_same_children_as(other)
         else:
             return self._has_same_children_as(other)
@@ -265,8 +296,9 @@ class _ElementImpl(base.Element):
             child = self.get_children(child_name)
             other_child = getattr(other, child_name)
             if not child_spec.repeated:
-                if ((child is None and other_child is not None) or
-                        (child is not None and not child.is_same_as(other_child))):
+                if (child is None and other_child is not None) or (
+                    child is not None and not child.is_same_as(other_child)
+                ):
                     return False
             else:
                 if len(child) != len(other_child):
@@ -278,9 +310,10 @@ class _ElementImpl(base.Element):
         return True
 
     def _tendon_has_same_children_as(self, other):
-        return all(child.is_same_as(other_child)
-                   for child, other_child
-                   in zip(self.all_children(), other.all_children()))
+        return all(
+            child.is_same_as(other_child)
+            for child, other_child in zip(self.all_children(), other.all_children())
+        )
 
     def _alias_attributes_dict(self, other):
         if self._own_attributes is None:
@@ -319,11 +352,11 @@ class _ElementImpl(base.Element):
             return None
         elif self._is_worldbody:
             prefix = self.namescope.full_prefix(prefix_root=prefix_root)
-            return prefix or 'world'
+            return prefix or "world"
         else:
-            full_identifier = (
-                self._attributes[self._spec.identifier].to_xml_string(
-                    prefix_root=prefix_root))
+            full_identifier = self._attributes[self._spec.identifier].to_xml_string(
+                prefix_root=prefix_root
+            )
             if full_identifier:
                 return full_identifier
             else:
@@ -336,7 +369,8 @@ class _ElementImpl(base.Element):
         """Fully-qualified identifier used for this element in the generated XML."""
         if self.namescope.revision > self._cached_revision:
             self._cached_full_identifier = self.prefixed_identifier(
-                prefix_root=self.namescope.root)
+                prefix_root=self.namescope.root
+            )
             self._cached_revision = self.namescope.revision
         return self._cached_full_identifier
 
@@ -346,12 +380,14 @@ class _ElementImpl(base.Element):
         if not self._spec.identifier:
             return None
         else:
-            siblings = self.root.find_all(self._spec.namespace,
-                                          exclude_attachments=True)
-            return '{separator}unnamed_{namespace}_{index}'.format(
+            siblings = self.root.find_all(
+                self._spec.namespace, exclude_attachments=True
+            )
+            return "{separator}unnamed_{namespace}_{index}".format(
                 separator=constants.PREFIX_SEPARATOR,
                 namespace=self._spec.namespace,
-                index=siblings.index(self))
+                index=siblings.index(self),
+            )
 
     def __dir__(self):
         out_dir = set()
@@ -397,18 +433,21 @@ class _ElementImpl(base.Element):
         """
         if not isinstance(namespace, six.string_types):
             raise ValueError(
-                '`namespace` should be a string: got {!r}'.format(namespace))
+                "`namespace` should be a string: got {!r}".format(namespace)
+            )
         if not isinstance(identifier, six.string_types):
             raise ValueError(
-                '`identifier` should be a string: got {!r}'.format(identifier))
+                "`identifier` should be a string: got {!r}".format(identifier)
+            )
         if namespace not in schema.FINDABLE_NAMESPACES:
-            raise ValueError('{!r} is not a valid namespace.'.format(namespace))
+            raise ValueError("{!r} is not a valid namespace.".format(namespace))
         if constants.PREFIX_SEPARATOR in identifier:
             scope_name = identifier.split(constants.PREFIX_SEPARATOR)[0]
             try:
-                attachment = self.namescope.get('attached_model', scope_name)
+                attachment = self.namescope.get("attached_model", scope_name)
                 found_element = attachment.find(
-                    namespace, identifier[(len(scope_name) + 1):])
+                    namespace, identifier[(len(scope_name) + 1) :]
+                )
             except (KeyError, ValueError):
                 found_element = None
         else:
@@ -424,8 +463,9 @@ class _ElementImpl(base.Element):
                     found_element = None
         return found_element
 
-    def find_all(self, namespace,
-                 immediate_children_only=False, exclude_attachments=False):
+    def find_all(
+        self, namespace, immediate_children_only=False, exclude_attachments=False
+    ):
         """Finds all elements of a particular kind.
 
         The `namespace` argument specifies the kind of element to
@@ -451,21 +491,29 @@ class _ElementImpl(base.Element):
           ValueError: if `namespace` is not a valid namespace.
         """
         if namespace not in schema.FINDABLE_NAMESPACES:
-            raise ValueError('{!r} is not a valid namespace.'.format(namespace))
+            raise ValueError("{!r} is not a valid namespace.".format(namespace))
         out = []
         children = self._children if exclude_attachments else self.all_children()
         for child in children:
-            if (namespace == child.spec.namespace or
-                    # Direct children of attachment frames have custom namespaces of the
-                    # form "joint@attachment_frame_<id>".
-                    child.spec.namespace and child.spec.namespace.startswith(
-                        namespace + constants.NAMESPACE_SEPARATOR) or
-                    # Attachment frames are considered part of the "body" namespace.
-                    namespace == constants.BODY and isinstance(child, _AttachmentFrame)):
+            if (
+                namespace == child.spec.namespace
+                or
+                # Direct children of attachment frames have custom namespaces of the
+                # form "joint@attachment_frame_<id>".
+                child.spec.namespace
+                and child.spec.namespace.startswith(
+                    namespace + constants.NAMESPACE_SEPARATOR
+                )
+                or
+                # Attachment frames are considered part of the "body" namespace.
+                namespace == constants.BODY
+                and isinstance(child, _AttachmentFrame)
+            ):
                 out.append(child)
             if not immediate_children_only:
-                out.extend(child.find_all(namespace,
-                                          exclude_attachments=exclude_attachments))
+                out.extend(
+                    child.find_all(namespace, exclude_attachments=exclude_attachments)
+                )
         return out
 
     def enter_scope(self, scope_identifier):
@@ -485,26 +533,28 @@ class _ElementImpl(base.Element):
         if constants.PREFIX_SEPARATOR in scope_identifier:
             scope_name = scope_identifier.split(constants.PREFIX_SEPARATOR)[0]
             try:
-                attachment = self.namescope.get('attached_model', scope_name)
+                attachment = self.namescope.get("attached_model", scope_name)
             except KeyError:
                 return None
 
-            scope_suffix = scope_identifier[(len(scope_name) + 1):]
+            scope_suffix = scope_identifier[(len(scope_name) + 1) :]
             if scope_suffix:
                 return attachment.enter_scope(scope_suffix)
             else:
                 return attachment
         else:
             try:
-                return self.namescope.get('attached_model', scope_identifier)
+                return self.namescope.get("attached_model", scope_identifier)
             except KeyError:
                 return None
 
     def _check_valid_attribute(self, attribute_name):
         if attribute_name not in self._spec.attributes:
             raise AttributeError(
-                '{!r} is not a valid attribute for <{}>'.format(
-                    attribute_name, self._spec.name))
+                "{!r} is not a valid attribute for <{}>".format(
+                    attribute_name, self._spec.name
+                )
+            )
 
     def _get_attribute(self, attribute_name):
         self._check_valid_attribute(attribute_name)
@@ -516,11 +566,15 @@ class _ElementImpl(base.Element):
 
     def get_attributes(self):
         fix_attribute_name = (
-            lambda name: constants.DCLASS if name == constants.CLASS else name)
+            lambda name: constants.DCLASS if name == constants.CLASS else name
+        )
         return collections.OrderedDict(
-            [(fix_attribute_name(name), self._get_attribute(name))
-             for name in six.iterkeys(self._spec.attributes)
-             if self._get_attribute(name) is not None])
+            [
+                (fix_attribute_name(name), self._get_attribute(name))
+                for name in six.iterkeys(self._spec.attributes)
+                if self._get_attribute(name) is not None
+            ]
+        )
 
     def _set_attribute(self, attribute_name, value):
         self._check_valid_attribute(attribute_name)
@@ -544,9 +598,9 @@ class _ElementImpl(base.Element):
                         self._set_attribute(name, old_value)
                     # Then raise a meaningful error.
                     err_type, err, tb = sys.exc_info()
-                    message = (
-                        'during assignment to attribute {!r} of element <{}>: {}'
-                            .format(attribute_name, self._spec.name, err))
+                    message = "during assignment to attribute {!r} of element <{}>: {}".format(
+                        attribute_name, self._spec.name, err
+                    )
                     six.reraise(err_type, err_type(message), tb)
 
     def _remove_attribute(self, attribute_name):
@@ -559,8 +613,10 @@ class _ElementImpl(base.Element):
             return self._spec.children[element_name]
         except KeyError:
             raise AttributeError(
-                '<{}> is not a valid child of <{}>'
-                    .format(element_name, self._spec.name))
+                "<{}> is not a valid child of <{}>".format(
+                    element_name, self._spec.name
+                )
+            )
 
     def get_children(self, element_name):
         child_spec = self._check_valid_child(element_name)
@@ -574,10 +630,12 @@ class _ElementImpl(base.Element):
                 return None
             else:
                 raise RuntimeError(
-                    'Cannot find the non-repeated child <{}> of <{}>. '
-                    'This should never happen, as we pre-create these in __init__. '
-                    'Please file an bug report. Thank you.'
-                        .format(element_name, self._spec.name))
+                    "Cannot find the non-repeated child <{}> of <{}>. "
+                    "This should never happen, as we pre-create these in __init__. "
+                    "Please file an bug report. Thank you.".format(
+                        element_name, self._spec.name
+                    )
+                )
 
     def add(self, element_name, **kwargs):
         """Add a new child element to this element.
@@ -599,8 +657,11 @@ class _ElementImpl(base.Element):
         else:
             need_new_on_demand = False
         if not (child_spec.repeated or need_new_on_demand):
-            raise ValueError('A <{}> child already exists, please access it directly.'
-                             .format(element_name))
+            raise ValueError(
+                "A <{}> child already exists, please access it directly.".format(
+                    element_name
+                )
+            )
         new_element = _make_element(child_spec, self, attributes=kwargs)
         self._children.append(new_element)
         self.namescope.increment_revision()
@@ -622,7 +683,7 @@ class _ElementImpl(base.Element):
         elif name == constants.DCLASS and constants.CLASS in self._spec.attributes:
             return self._get_attribute(constants.CLASS)
         else:
-            raise AttributeError('object has no attribute: {}'.format(name))
+            raise AttributeError("object has no attribute: {}".format(name))
 
     def __setattr__(self, name, value):
         # If this name corresponds to a descriptor for a slotted attribute or
@@ -640,29 +701,34 @@ class _ElementImpl(base.Element):
         if attribute_name in self._spec.attributes:
             self._set_attribute(attribute_name, value)
         else:
-            raise AttributeError('can\'t set attribute: {}'.format(name))
+            raise AttributeError("can't set attribute: {}".format(name))
 
     def __delattr__(self, name):
         if name in self._spec.children:
             if self._spec.children[name].repeated:
                 raise AttributeError(
-                    '`{0}` is a collection of child elements, '
-                    'which cannot be deleted. Did you mean to call `{0}.clear()`?'
-                        .format(name))
+                    "`{0}` is a collection of child elements, "
+                    "which cannot be deleted. Did you mean to call `{0}.clear()`?".format(
+                        name
+                    )
+                )
             else:
                 return self.get_children(name).remove()
         elif name in self._spec.attributes:
             return self._remove_attribute(name)
         else:
-            raise AttributeError('object has no attribute: {}'.format(name))
+            raise AttributeError("object has no attribute: {}".format(name))
 
     def _check_attachments_on_remove(self, affect_attachments):
         if not affect_attachments and self._attachments:
             raise ValueError(
-                'please use remove(affect_attachments=True) as this will affect some '
-                'attributes and/or children belonging to an attached model')
+                "please use remove(affect_attachments=True) as this will affect some "
+                "attributes and/or children belonging to an attached model"
+            )
         for child in self._children:
-            child._check_attachments_on_remove(affect_attachments)  # pylint: disable=protected-access
+            child._check_attachments_on_remove(
+                affect_attachments
+            )  # pylint: disable=protected-access
 
     def remove(self, affect_attachments=False):
         """Removes this element from the model."""
@@ -690,8 +756,9 @@ class _ElementImpl(base.Element):
     def all_children(self):
         all_children = [child for child in self._children]
         for attachment in six.itervalues(self._attachments):
-            all_children += [child for child in attachment.all_children()
-                             if child.spec.repeated]
+            all_children += [
+                child for child in attachment.all_children() if child.spec.repeated
+            ]
         return all_children
 
     def to_xml(self, prefix_root=None, debug_context=None):
@@ -729,8 +796,12 @@ class _ElementImpl(base.Element):
     def _children_to_xml(self, xml_element, prefix_root, debug_context=None):
         for child in self.all_children():
             child_xml = child.to_xml(prefix_root, debug_context)
-            if (child_xml.attrib or len(child_xml)  # pylint: disable=g-explicit-length-test
-                    or child.spec.repeated or child.spec.on_demand):
+            if (
+                child_xml.attrib
+                or len(child_xml)  # pylint: disable=g-explicit-length-test
+                or child.spec.repeated
+                or child.spec.on_demand
+            ):
                 xml_element.append(child_xml)
                 if debugging.debug_mode() and debug_context:
                     debug_comment = debug_context.register_element_for_debugging(child)
@@ -738,8 +809,9 @@ class _ElementImpl(base.Element):
                     if len(child_xml) > 0:  # pylint: disable=g-explicit-length-test
                         child_xml.insert(0, copy.deepcopy(debug_comment))
 
-    def to_xml_string(self, prefix_root=None,
-                      self_only=False, pretty_print=True, debug_context=None):
+    def to_xml_string(
+        self, prefix_root=None, self_only=False, pretty_print=True, debug_context=None
+    ):
         """Generates an XML string corresponding to this MJCF element.
 
         Args:
@@ -760,13 +832,17 @@ class _ElementImpl(base.Element):
         """
         xml_element = self.to_xml(prefix_root, debug_context)
         if self_only and len(xml_element) > 0:  # pylint: disable=g-explicit-length-test
-            etree.strip_elements(xml_element, '*')
-            xml_element.text = '...'
-        if (self_only and self._spec.identifier and
-                not self._attributes[self._spec.identifier].to_xml_string(prefix_root)):
+            etree.strip_elements(xml_element, "*")
+            xml_element.text = "..."
+        if (
+            self_only
+            and self._spec.identifier
+            and not self._attributes[self._spec.identifier].to_xml_string(prefix_root)
+        ):
             del xml_element.attrib[self._spec.identifier]
         xml_string = util.to_native_string(
-            etree.tostring(xml_element, pretty_print=pretty_print))
+            etree.tostring(xml_element, pretty_print=pretty_print)
+        )
         if pretty_print and debug_context:
             return debug_context.commit_xml_string(xml_string)
         else:
@@ -776,7 +852,7 @@ class _ElementImpl(base.Element):
         return self.to_xml_string(self_only=True, pretty_print=False)
 
     def __repr__(self):
-        return 'MJCF Element: ' + str(self)
+        return "MJCF Element: " + str(self)
 
     def _check_valid_attachment(self, other):
         self_spec = self._spec
@@ -788,8 +864,7 @@ class _ElementImpl(base.Element):
             other_spec = other_spec.children[constants.BODY]
 
         if other_spec != self_spec:
-            raise ValueError(
-                'The attachment must have the same spec as this element.')
+            raise ValueError("The attachment must have the same spec as this element.")
 
     def _attach(self, other, exclude_worldbody=False, dry_run=False):
         """Attaches another element of the same spec to this element.
@@ -824,7 +899,9 @@ class _ElementImpl(base.Element):
             self._sync_attributes(other, copying=False)
         self._attach_children(other, exclude_worldbody, dry_run)
         if other.tag != constants.WORLDBODY and not dry_run:
-            other._alias_attributes_dict(self._attributes)  # pylint: disable=protected-access
+            other._alias_attributes_dict(
+                self._attributes
+            )  # pylint: disable=protected-access
 
     def _detach(self, other_namescope):
         """Detaches a model with the specified namescope."""
@@ -836,33 +913,38 @@ class _ElementImpl(base.Element):
             child._detach(other_namescope)  # pylint: disable=protected-access
 
     def _check_conflicting_attributes(self, other, copying):
-        for attribute_name, other_attribute in six.iteritems(
-                other.get_attributes()):
+        for attribute_name, other_attribute in six.iteritems(other.get_attributes()):
             if attribute_name == constants.DCLASS:
                 attribute_name = constants.CLASS
-            if ((not self._attributes[attribute_name].conflict_allowed)
-                    and self._attributes[attribute_name].value is not None
-                    and other_attribute is not None
-                    and np.asarray(
-                        self._attributes[attribute_name].value != other_attribute).any()):
+            if (
+                (not self._attributes[attribute_name].conflict_allowed)
+                and self._attributes[attribute_name].value is not None
+                and other_attribute is not None
+                and np.asarray(
+                    self._attributes[attribute_name].value != other_attribute
+                ).any()
+            ):
                 raise ValueError(
-                    'Conflicting values for attribute `{}`: {} vs {}'
-                        .format(attribute_name,
-                                self._attributes[attribute_name].value,
-                                other_attribute))
+                    "Conflicting values for attribute `{}`: {} vs {}".format(
+                        attribute_name,
+                        self._attributes[attribute_name].value,
+                        other_attribute,
+                    )
+                )
 
     def _sync_attributes(self, other, copying):
         self._check_conflicting_attributes(other, copying)
-        for attribute_name, other_attribute in six.iteritems(
-                other.get_attributes()):
+        for attribute_name, other_attribute in six.iteritems(other.get_attributes()):
             if attribute_name == constants.DCLASS:
                 attribute_name = constants.CLASS
 
             self_attribute = self._attributes[attribute_name]
             if other_attribute is not None:
-                if self_attribute.conflict_behavior == 'max':
+                if self_attribute.conflict_behavior == "max":
                     if self_attribute.value is not None:
-                        self_attribute.value = max(self_attribute.value, other_attribute)
+                        self_attribute.value = max(
+                            self_attribute.value, other_attribute
+                        )
                     else:
                         self_attribute.value = other_attribute
                 elif copying or not self_attribute.conflict_allowed:
@@ -872,14 +954,17 @@ class _ElementImpl(base.Element):
         for other_child in other.all_children():
             if not other_child.spec.repeated:
                 self_child = self.get_children(other_child.spec.name)
-                self_child._attach(other_child, exclude_worldbody, dry_run)  # pylint: disable=protected-access
+                self_child._attach(
+                    other_child, exclude_worldbody, dry_run
+                )  # pylint: disable=protected-access
 
     def resolve_references(self):
         for attribute in six.itervalues(self._attributes):
             if isinstance(attribute, attribute_types.Reference):
                 if attribute.value and isinstance(attribute.value, six.string_types):
                     referred = self.root.find(
-                        attribute.reference_namespace, attribute.value)
+                        attribute.reference_namespace, attribute.value
+                    )
                     if referred:
                         attribute.value = referred
         for child in self.all_children():
@@ -899,6 +984,7 @@ class _AttachableElement(_ElementImpl):
 
     This element defines a frame to which another MJCF model can be attached.
     """
+
     __slots__ = []
 
     def attach(self, attachment):
@@ -920,20 +1006,22 @@ class _AttachableElement(_ElementImpl):
           ValueError: If `other` is not a valid attachment to this element.
         """
         if not isinstance(attachment, RootElement):
-            raise ValueError('Expected a mjcf.RootElement: got {}'
-                             .format(attachment))
+            raise ValueError("Expected a mjcf.RootElement: got {}".format(attachment))
         if attachment.namescope.parent is not None:
-            raise ValueError('The model specified is already attached elsewhere')
+            raise ValueError("The model specified is already attached elsewhere")
         if attachment.namescope == self.namescope:
-            raise ValueError('Cannot merge a model to itself')
-        self.root._attach(attachment, exclude_worldbody=True, dry_run=True)  # pylint: disable=protected-access
+            raise ValueError("Cannot merge a model to itself")
+        self.root._attach(
+            attachment, exclude_worldbody=True, dry_run=True
+        )  # pylint: disable=protected-access
 
-        if self.namescope.has_identifier('namescope', attachment.model):
+        if self.namescope.has_identifier("namescope", attachment.model):
             id_number = 1
             while self.namescope.has_identifier(
-                    'namescope', '{}_{}'.format(attachment.model, id_number)):
+                "namescope", "{}_{}".format(attachment.model, id_number)
+            ):
                 id_number += 1
-            attachment.model = '{}_{}'.format(attachment.model, id_number)
+            attachment.model = "{}_{}".format(attachment.model, id_number)
         attachment.namescope.parent = self.namescope
 
         if self.tag == constants.WORLDBODY:
@@ -944,19 +1032,22 @@ class _AttachableElement(_ElementImpl):
             frame_parent = self._parent
             frame_siblings = self._parent._children  # pylint: disable=protected-access
             index = frame_siblings.index(self) + 1
-            while (index < len(frame_siblings)
-                   and isinstance(frame_siblings[index], _AttachmentFrame)):
+            while index < len(frame_siblings) and isinstance(
+                frame_siblings[index], _AttachmentFrame
+            ):
                 index += 1
         frame = _AttachmentFrame(frame_parent, self, attachment)
         frame_siblings.insert(index, frame)
-        self.root._attach(attachment, exclude_worldbody=True)  # pylint: disable=protected-access
+        self.root._attach(
+            attachment, exclude_worldbody=True
+        )  # pylint: disable=protected-access
         return frame
 
 
 class _AttachmentFrame(_ElementImpl):
-    """An specialized <body> representing a frame holding an external attachment.
-    """
-    __slots__ = ['_site', '_attachment']
+    """An specialized <body> representing a frame holding an external attachment."""
+
+    __slots__ = ["_site", "_attachment"]
 
     def __init__(self, parent, site, attachment):
         if parent.tag == constants.WORLDBODY:
@@ -971,8 +1062,9 @@ class _AttachmentFrame(_ElementImpl):
                     spec = copy.deepcopy(spec)
                     spec_is_copied = True
                 spec_as_dict = child_spec._asdict()
-                spec_as_dict['namespace'] = '{}{}attachment_frame_{}'.format(
-                    child_spec.namespace, constants.NAMESPACE_SEPARATOR, id(self))
+                spec_as_dict["namespace"] = "{}{}attachment_frame_{}".format(
+                    child_spec.namespace, constants.NAMESPACE_SEPARATOR, id(self)
+                )
                 spec.children[child_name] = type(child_spec)(**spec_as_dict)
 
         attributes = {}
@@ -984,17 +1076,16 @@ class _AttachmentFrame(_ElementImpl):
         self._site = site
         self._attachment = attachment
         self._attachments[attachment.namescope] = attachment.worldbody
-        self.namescope.add('attachment_frame', attachment.namescope.name, self)
-        self.namescope.add('attached_model', attachment.namescope.name, attachment)
+        self.namescope.add("attachment_frame", attachment.namescope.name, self)
+        self.namescope.add("attached_model", attachment.namescope.name, attachment)
 
     def prefixed_identifier(self, prefix_root=None):
         prefix = self.namescope.full_prefix(prefix_root)
         return prefix + self._attachment.namescope.name + constants.PREFIX_SEPARATOR
 
     def to_xml(self, prefix_root=None, debug_context=None):
-        xml_element = (
-            super(_AttachmentFrame, self).to_xml(prefix_root, debug_context))
-        xml_element.set('name', self.prefixed_identifier(prefix_root))
+        xml_element = super(_AttachmentFrame, self).to_xml(prefix_root, debug_context)
+        xml_element.set("name", self.prefixed_identifier(prefix_root))
         return xml_element
 
     @property
@@ -1004,8 +1095,8 @@ class _AttachmentFrame(_ElementImpl):
     def _detach(self, other_namescope):
         super(_AttachmentFrame, self)._detach(other_namescope)
         if other_namescope is self._attachment.namescope:
-            self.namescope.remove('attachment_frame', self._attachment.namescope.name)
-            self.namescope.remove('attached_model', self._attachment.namescope.name)
+            self.namescope.remove("attachment_frame", self._attachment.namescope.name)
+            self.namescope.remove("attached_model", self._attachment.namescope.name)
             self.remove()
 
 
@@ -1016,24 +1107,32 @@ class _AttachmentFrameChild(_ElementImpl):
     is not freely specifiable, but instead just inherits from the parent frame.
     This ensures uniqueness, as attachment frame identifiers always end in '/'.
     """
+
     __slots__ = []
 
     def to_xml(self, prefix_root=None, debug_context=None):
-        xml_element = (
-            super(_AttachmentFrameChild, self).to_xml(prefix_root, debug_context))
+        xml_element = super(_AttachmentFrameChild, self).to_xml(
+            prefix_root, debug_context
+        )
         if self.spec.namespace is not None:
             if self.name:
-                name = (self._parent.prefixed_identifier(prefix_root) +
-                        self.name + constants.PREFIX_SEPARATOR)
+                name = (
+                    self._parent.prefixed_identifier(prefix_root)
+                    + self.name
+                    + constants.PREFIX_SEPARATOR
+                )
             else:
                 name = self._parent.prefixed_identifier(prefix_root)
-            xml_element.set('name', name)
+            xml_element.set("name", name)
         return xml_element
 
     def prefixed_identifier(self, prefix_root=None):
         if self.name:
-            return (self._parent.prefixed_identifier(prefix_root) +
-                    self.name + constants.PREFIX_SEPARATOR)
+            return (
+                self._parent.prefixed_identifier(prefix_root)
+                + self.name
+                + constants.PREFIX_SEPARATOR
+            )
         else:
             return self._parent.prefixed_identifier(prefix_root)
 
@@ -1043,14 +1142,17 @@ class _DefaultElement(_ElementImpl):
 
     This is necessary for the proper handling of global defaults.
     """
+
     __slots__ = []
 
     def _attach(self, other, exclude_worldbody=False, dry_run=False):
         self._check_valid_attachment(other)
-        if ((not isinstance(self._parent, RootElement))
-                or (not isinstance(other.parent, RootElement))):
-            raise ValueError('Only global <{}> can be attached'
-                             .format(constants.DEFAULT))
+        if (not isinstance(self._parent, RootElement)) or (
+            not isinstance(other.parent, RootElement)
+        ):
+            raise ValueError(
+                "Only global <{}> can be attached".format(constants.DEFAULT)
+            )
         if not dry_run:
             self._attachments[other.namescope] = other
 
@@ -1059,8 +1161,7 @@ class _DefaultElement(_ElementImpl):
 
     def to_xml(self, prefix_root=None, debug_context=None):
         prefix_root = prefix_root or self.namescope
-        xml_element = (
-            super(_DefaultElement, self).to_xml(prefix_root, debug_context))
+        xml_element = super(_DefaultElement, self).to_xml(prefix_root, debug_context)
         if isinstance(self._parent, RootElement):
             root_default = etree.Element(self._spec.name)
             root_default.append(xml_element)
@@ -1079,12 +1180,13 @@ class _ActuatorElement(_ElementImpl):
     those with internal dynamics) come after all 2nd-order actuators in the
     generated XML.
     """
+
     __slots__ = ()
 
     def _is_third_order_actuator(self, child):
-        if child.tag == 'general':
-            return child.dyntype and child.dyntype != 'none'
-        elif child.tag == 'cylinder':
+        if child.tag == "general":
+            return child.dyntype and child.dyntype != "none"
+        elif child.tag == "cylinder":
             return True  # The `<cylinder>` shortcut has 'filter' dynamics.
         else:
             return False  # No other actuator shortcuts have internal dynamics.
@@ -1095,8 +1197,12 @@ class _ActuatorElement(_ElementImpl):
         debug_comments = {}
         for child in self.all_children():
             child_xml = child.to_xml(prefix_root, debug_context)
-            if (child_xml.attrib or len(child_xml)  # pylint: disable=g-explicit-length-test
-                    or child.spec.repeated or child.spec.on_demand):
+            if (
+                child_xml.attrib
+                or len(child_xml)  # pylint: disable=g-explicit-length-test
+                or child.spec.repeated
+                or child.spec.on_demand
+            ):
                 if self._is_third_order_actuator(child):
                     third_order.append(child_xml)
                 else:
@@ -1116,14 +1222,17 @@ class _ActuatorElement(_ElementImpl):
 
 class RootElement(_ElementImpl):
     """The root `<mujoco>` element of an MJCF model."""
-    __slots__ = ['_namescope']
 
-    def __init__(self, model=None, model_dir='', assets=None):
-        model = model or 'unnamed_model'
+    __slots__ = ["_namescope"]
+
+    def __init__(self, model=None, model_dir="", assets=None):
+        model = model or "unnamed_model"
         self._namescope = namescope.NameScope(
-            model, self, model_dir=model_dir, assets=assets)
+            model, self, model_dir=model_dir, assets=assets
+        )
         super(RootElement, self).__init__(
-            spec=schema.MUJOCO, parent=None, attributes={'model': model})
+            spec=schema.MUJOCO, parent=None, attributes={"model": model}
+        )
 
     def _attach(self, other, exclude_worldbody=False, dry_run=False):
         self._check_valid_attachment(other)
@@ -1148,10 +1257,10 @@ class RootElement(_ElementImpl):
     def model(self, new_name):
         old_name = self._namescope.name
         self._namescope.name = new_name
-        self._attributes['model'].value = new_name
+        self._attributes["model"].value = new_name
         if self.parent_model:
-            self.parent_model.namescope.rename('attachment_frame', old_name, new_name)
-            self.parent_model.namescope.rename('attached_model', old_name, new_name)
+            self.parent_model.namescope.rename("attachment_frame", old_name, new_name)
+            self.parent_model.namescope.rename("attached_model", old_name, new_name)
 
     def attach(self, other):
         return self.worldbody.attach(other)
@@ -1160,7 +1269,8 @@ class RootElement(_ElementImpl):
         parent_model = self.parent_model
         if not parent_model:
             raise RuntimeError(
-                'Cannot `detach` a model that is not attached to some other model.')
+                "Cannot `detach` a model that is not attached to some other model."
+            )
         else:
             parent_model._detach(self.namescope)  # pylint: disable=protected-access
             self.namescope.parent = None
@@ -1199,9 +1309,11 @@ class RootElement(_ElementImpl):
         ```
         """
         # Get the assets referenced within this `RootElement`'s namescope.
-        assets = {file_obj.to_xml_string(): file_obj.get_contents()
-                  for file_obj in self.namescope.files
-                  if file_obj.value}
+        assets = {
+            file_obj.to_xml_string(): file_obj.get_contents()
+            for file_obj in self.namescope.files
+            if file_obj.value
+        }
 
         # Recursively add assets belonging to attachments.
         for attached_model in six.itervalues(self._attachments):
@@ -1214,8 +1326,9 @@ class RootElement(_ElementImpl):
         return self._namescope.full_prefix(self._namescope.root)
 
     def __copy__(self):
-        new_model = RootElement(model=self._namescope.name,
-                                model_dir=self.namescope.model_dir)
+        new_model = RootElement(
+            model=self._namescope.name, model_dir=self.namescope.model_dir
+        )
         new_model.include_copy(self)
         return new_model
 
@@ -1237,9 +1350,13 @@ class _ElementListView(object):
         # pylint: disable=protected-access
         self._elements = self._parent._children
         self._scoped_elements = collections.OrderedDict(
-            [(scope_namescope.name, getattr(scoped_parent, self._spec.name))
-             for scope_namescope, scoped_parent
-             in six.iteritems(self._parent._attachments)])
+            [
+                (scope_namescope.name, getattr(scoped_parent, self._spec.name))
+                for scope_namescope, scoped_parent in six.iteritems(
+                    self._parent._attachments
+                )
+            ]
+        )
 
     @property
     def spec(self):
@@ -1264,15 +1381,20 @@ class _ElementListView(object):
         return iter(self._full_list())
 
     def _identifier_not_found_error(self, index):
-        return KeyError('An element <{}> with {}={!r} does not exist'
-                        .format(self._spec.name, self._spec.identifier, index))
+        return KeyError(
+            "An element <{}> with {}={!r} does not exist".format(
+                self._spec.name, self._spec.identifier, index
+            )
+        )
 
     def _find_index(self, index):
         """Locates an element given the index among siblings with the same tag."""
         if isinstance(index, str) and self._spec.identifier:
             for i, element in enumerate(self._elements):
-                if (element.tag == self._spec.name
-                        and getattr(element, self._spec.identifier) == index):
+                if (
+                    element.tag == self._spec.name
+                    and getattr(element, self._spec.identifier) == index
+                ):
                     return i
             raise self._identifier_not_found_error(index)
         else:
@@ -1283,11 +1405,12 @@ class _ElementListView(object):
                         return i
                     else:
                         count += 1
-            raise IndexError('list index out of range')
+            raise IndexError("list index out of range")
 
     def _full_list(self):
-        out_list = [element for element in self._elements
-                    if element.tag == self._spec.name]
+        out_list = [
+            element for element in self._elements if element.tag == self._spec.name
+        ]
         for scoped_elements in six.itervalues(self._scoped_elements):
             out_list += scoped_elements[:]
         return out_list
@@ -1297,12 +1420,15 @@ class _ElementListView(object):
             child.remove()
 
     def __getitem__(self, index):
-        if (isinstance(index, str) and self._spec.identifier
-                and constants.PREFIX_SEPARATOR in index):
+        if (
+            isinstance(index, str)
+            and self._spec.identifier
+            and constants.PREFIX_SEPARATOR in index
+        ):
             scope_name = index.split(constants.PREFIX_SEPARATOR)[0]
             scoped_elements = self._scoped_elements[scope_name]
             try:
-                return scoped_elements[index[(len(scope_name) + 1):]]
+                return scoped_elements[index[(len(scope_name) + 1) :]]
             except KeyError:
                 # Re-raise so that the error shows the full, un-stripped index string
                 raise self._identifier_not_found_error(index)
@@ -1317,12 +1443,16 @@ class _ElementListView(object):
 
     def __str__(self):
         return str(
-            [element.to_xml_string(
-                prefix_root=self.namescope, self_only=True, pretty_print=False)
-                for element in self._full_list()])
+            [
+                element.to_xml_string(
+                    prefix_root=self.namescope, self_only=True, pretty_print=False
+                )
+                for element in self._full_list()
+            ]
+        )
 
     def __repr__(self):
-        return 'MJCF Elements List: ' + str(self)
+        return "MJCF Elements List: " + str(self)
 
 
 # This restores @property back to Python's built-in one.

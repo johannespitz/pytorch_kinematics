@@ -3,21 +3,28 @@ from . import frame
 from . import chain
 import torch
 import pytorch_kinematics.transforms as tf
+
 # has better RPY to quaternion transformation
 import transformations as tf2
 
-JOINT_TYPE_MAP = {'revolute': 'revolute',
-                  'continuous': 'revolute',
-                  'prismatic': 'prismatic',
-                  'fixed': 'fixed'}
+JOINT_TYPE_MAP = {
+    "revolute": "revolute",
+    "continuous": "revolute",
+    "prismatic": "prismatic",
+    "fixed": "fixed",
+}
 
 
 def _convert_transform(origin):
     if origin is None:
         return tf.Transform3d()
     else:
-        return tf.Transform3d(rot=torch.tensor(tf2.quaternion_from_euler(*origin.rpy, "sxyz"), dtype=torch.float32),
-                              pos=origin.xyz)
+        return tf.Transform3d(
+            rot=torch.tensor(
+                tf2.quaternion_from_euler(*origin.rpy, "sxyz"), dtype=torch.float32
+            ),
+            pos=origin.xyz,
+        )
 
 
 def _convert_visual(visual):
@@ -48,11 +55,18 @@ def _build_chain_recurse(root_frame, lmap, joints):
     for j in joints:
         if j.parent == root_frame.link.name:
             child_frame = frame.Frame(j.child + "_frame")
-            child_frame.joint = frame.Joint(j.name, offset=_convert_transform(j.origin),
-                                            joint_type=JOINT_TYPE_MAP[j.type], axis=j.axis)
+            child_frame.joint = frame.Joint(
+                j.name,
+                offset=_convert_transform(j.origin),
+                joint_type=JOINT_TYPE_MAP[j.type],
+                axis=j.axis,
+            )
             link = lmap[j.child]
-            child_frame.link = frame.Link(link.name, offset=_convert_transform(link.origin),
-                                          visuals=[_convert_visual(link.visual)])
+            child_frame.link = frame.Link(
+                link.name,
+                offset=_convert_transform(link.origin),
+                visuals=[_convert_visual(link.visual)],
+            )
             child_frame.children = _build_chain_recurse(child_frame, lmap, joints)
             children.append(child_frame)
     return children
@@ -86,7 +100,7 @@ def build_chain_from_urdf(data):
     >>> chain = pk.build_chain_from_urdf(data)
     >>> print(chain)
     link1_frame
-     	link2_frame
+        link2_frame
 
     """
     robot = URDF.from_xml_string(data)
@@ -106,8 +120,11 @@ def build_chain_from_urdf(data):
             break
     root_frame = frame.Frame(root_link.name + "_frame")
     root_frame.joint = frame.Joint()
-    root_frame.link = frame.Link(root_link.name, _convert_transform(root_link.origin),
-                                 [_convert_visual(root_link.visual)])
+    root_frame.link = frame.Link(
+        root_link.name,
+        _convert_transform(root_link.origin),
+        [_convert_visual(root_link.visual)],
+    )
     root_frame.children = _build_chain_recurse(root_frame, lmap, joints)
     return chain.Chain(root_frame)
 
@@ -131,5 +148,8 @@ def build_serial_chain_from_urdf(data, end_link_name, root_link_name=""):
         SerialChain object created from URDF.
     """
     urdf_chain = build_chain_from_urdf(data)
-    return chain.SerialChain(urdf_chain, end_link_name + "_frame",
-                             "" if root_link_name == "" else root_link_name + "_frame")
+    return chain.SerialChain(
+        urdf_chain,
+        end_link_name + "_frame",
+        "" if root_link_name == "" else root_link_name + "_frame",
+    )

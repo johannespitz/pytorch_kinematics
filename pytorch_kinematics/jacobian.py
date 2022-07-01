@@ -20,26 +20,37 @@ def calc_jacobian(serial_chain, th, tool=None):
         N = th.shape[0]
     ndof = th.shape[1]
 
-    j_fl = torch.zeros((N, 6, ndof), dtype=serial_chain.dtype, device=serial_chain.device)
+    j_fl = torch.zeros(
+        (N, 6, ndof), dtype=serial_chain.dtype, device=serial_chain.device
+    )
 
     if tool is None:
-        cur_transform = transforms.Transform3d(device=serial_chain.device,
-                                               dtype=serial_chain.dtype).get_matrix().repeat(N, 1, 1)
+        cur_transform = (
+            transforms.Transform3d(device=serial_chain.device, dtype=serial_chain.dtype)
+            .get_matrix()
+            .repeat(N, 1, 1)
+        )
     else:
         if tool.dtype != serial_chain.dtype or tool.device != serial_chain.device:
-            tool = tool.to(device=serial_chain.device, copy=True, dtype=serial_chain.dtype)
+            tool = tool.to(
+                device=serial_chain.device, copy=True, dtype=serial_chain.dtype
+            )
         cur_transform = tool.get_matrix()
 
     cnt = 0
     for f in reversed(serial_chain._serial_frames):
         if f.joint.joint_type == "revolute":
             cnt += 1
-            d = torch.stack([-cur_transform[:, 0, 0] * cur_transform[:, 1, 3]
-                             + cur_transform[:, 1, 0] * cur_transform[:, 0, 3],
-                             -cur_transform[:, 0, 1] * cur_transform[:, 1, 3]
-                             + cur_transform[:, 1, 1] * cur_transform[:, 0, 3],
-                             -cur_transform[:, 0, 2] * cur_transform[:, 1, 3]
-                             + cur_transform[:, 1, 2] * cur_transform[:, 0, 3]]).transpose(0, 1)
+            d = torch.stack(
+                [
+                    -cur_transform[:, 0, 0] * cur_transform[:, 1, 3]
+                    + cur_transform[:, 1, 0] * cur_transform[:, 0, 3],
+                    -cur_transform[:, 0, 1] * cur_transform[:, 1, 3]
+                    + cur_transform[:, 1, 1] * cur_transform[:, 0, 3],
+                    -cur_transform[:, 0, 2] * cur_transform[:, 1, 3]
+                    + cur_transform[:, 1, 2] * cur_transform[:, 0, 3],
+                ]
+            ).transpose(0, 1)
             delta = cur_transform[:, 2, 0:3]
             j_fl[:, :, -cnt] = torch.cat((d, delta), dim=-1)
         elif f.joint.joint_type == "prismatic":

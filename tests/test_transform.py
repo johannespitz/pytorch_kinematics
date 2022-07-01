@@ -13,7 +13,10 @@ def test_transform():
     assert torch.allclose(mats, mats_recovered)
 
     quat_identity = tf.quaternion_multiply(quat, tf.quaternion_invert(quat))
-    assert torch.allclose(tf.quaternion_to_matrix(quat_identity), torch.eye(3, dtype=torch.float64).repeat(N, 1, 1))
+    assert torch.allclose(
+        tf.quaternion_to_matrix(quat_identity),
+        torch.eye(3, dtype=torch.float64).repeat(N, 1, 1),
+    )
 
 
 def test_translations():
@@ -32,7 +35,9 @@ def test_translations():
     translation = torch.randn((N, 3))
     transforms = tf.Transform3d(pos=translation)
     translated_points = transforms.transform_points(points)
-    assert torch.allclose(translated_points, translation.repeat(N, 1, 1).transpose(0, 1) + points)
+    assert torch.allclose(
+        translated_points, translation.repeat(N, 1, 1).transpose(0, 1) + points
+    )
     returned_points = transforms.inverse().transform_points(translated_points)
     assert torch.allclose(returned_points, points, atol=1e-6)
 
@@ -42,9 +47,9 @@ def test_rotate_axis_angle():
     points = torch.tensor([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 1.0, 1.0]]).view(
         1, 3, 3
     )
-    normals = torch.tensor(
-        [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]
-    ).view(1, 3, 3)
+    normals = torch.tensor([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]).view(
+        1, 3, 3
+    )
     points_out = t.transform_points(points)
     normals_out = t.transform_normals(normals)
     points_out_expected = torch.tensor(
@@ -63,9 +68,9 @@ def test_rotate():
     points = torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.5, 0.5, 0.0]]).view(
         1, 3, 3
     )
-    normals = torch.tensor(
-        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]
-    ).view(1, 3, 3)
+    normals = torch.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]).view(
+        1, 3, 3
+    )
     points_out = t.transform_points(points)
     normals_out = t.transform_normals(normals)
     points_out_expected = torch.bmm(points, R.transpose(-1, -2))
@@ -94,10 +99,19 @@ def test_transform_combined():
 def test_euler():
     euler_angles = torch.tensor([1, 0, 0.5])
     t = tf.Transform3d(rot=euler_angles)
-    sxyz_matrix = torch.tensor([[0.87758256, -0.47942554, 0., 0., ],
-                                [0.25903472, 0.47415988, -0.84147098, 0.],
-                                [0.40342268, 0.73846026, 0.54030231, 0.],
-                                [0., 0., 0., 1.]])
+    sxyz_matrix = torch.tensor(
+        [
+            [
+                0.87758256,
+                -0.47942554,
+                0.0,
+                0.0,
+            ],
+            [0.25903472, 0.47415988, -0.84147098, 0.0],
+            [0.40342268, 0.73846026, 0.54030231, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
     # from tf.transformations import euler_matrix
     # print(euler_matrix(*euler_angles, "rxyz"))
     # print(t.get_matrix())

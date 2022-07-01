@@ -19,7 +19,7 @@ from .rotation_conversions import (
     rotation_6d_to_matrix,
     standardize_quaternion,
     xyzw_to_wxyz,
-    wxyz_to_xyzw
+    wxyz_to_xyzw,
 )
 from .so3 import (
     so3_exp_map,

@@ -27,17 +27,21 @@ class Copier(object):
 
     def __init__(self, source):
         if source._attachments:  # pylint: disable=protected-access
-            raise NotImplementedError('Cannot copy from elements with attachments')
+            raise NotImplementedError("Cannot copy from elements with attachments")
         self._source = source
 
     def copy_into(self, destination, override_attributes=False):
         """Copies this copier's element into a destination MJCF element."""
         newly_created_elements = {}
-        destination._check_valid_attachment(self._source)  # pylint: disable=protected-access
+        destination._check_valid_attachment(
+            self._source
+        )  # pylint: disable=protected-access
         if override_attributes:
             destination.set_attributes(**self._source.get_attributes())
         else:
-            destination._sync_attributes(self._source, copying=True)  # pylint: disable=protected-access
+            destination._sync_attributes(
+                self._source, copying=True
+            )  # pylint: disable=protected-access
         for source_child in self._source.all_children():
             dest_child = None
             # First, if source_child has an identifier, we look for an existing child
@@ -48,11 +52,15 @@ class Copier(object):
                     identifier_attr = constants.DCLASS
                 identifier = getattr(source_child, identifier_attr)
                 if identifier:
-                    dest_child = destination.find(source_child.spec.namespace, identifier)
+                    dest_child = destination.find(
+                        source_child.spec.namespace, identifier
+                    )
                 if dest_child is not None and dest_child.parent is not destination:
                     raise ValueError(
-                        '<{}> with identifier {!r} is already a child of another element'
-                            .format(source_child.spec.namespace, identifier))
+                        "<{}> with identifier {!r} is already a child of another element".format(
+                            source_child.spec.namespace, identifier
+                        )
+                    )
             # Next, we cover the case where either the child is not a repeated element
             # or if source_child has an identifier attribute but it isn't set.
             if not source_child.spec.repeated and dest_child is None:
@@ -62,7 +70,8 @@ class Copier(object):
             # supposed to be a repeated child, or because it's an uncreated on-demand.
             if dest_child is None:
                 dest_child = destination.add(
-                    source_child.tag, **source_child.get_attributes())
+                    source_child.tag, **source_child.get_attributes()
+                )
                 newly_created_elements[source_child] = dest_child
                 override_child_attributes = True
             else:
@@ -71,5 +80,6 @@ class Copier(object):
             # Finally, copy attributes into dest_child.
             child_copier = Copier(source_child)
             newly_created_elements.update(
-                child_copier.copy_into(dest_child, override_child_attributes))
+                child_copier.copy_into(dest_child, override_child_attributes)
+            )
         return newly_created_elements

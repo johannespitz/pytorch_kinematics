@@ -20,12 +20,12 @@ from __future__ import division
 from __future__ import print_function
 
 
-def GetResource(name, mode='rb'):
+def GetResource(name, mode="rb"):
     with open(name, mode=mode) as f:
         return f.read()
 
 
-def GetResourceFilename(name, mode='rb'):
+def GetResourceFilename(name, mode="rb"):
     del mode  # Unused.
     return name
 

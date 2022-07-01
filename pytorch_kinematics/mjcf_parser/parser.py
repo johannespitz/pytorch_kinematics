@@ -30,8 +30,13 @@ import six
 from . import io as resources
 
 
-def from_xml_string(xml_string, escape_separators=False,
-                    model_dir='', resolve_references=True, assets=None):
+def from_xml_string(
+    xml_string,
+    escape_separators=False,
+    model_dir="",
+    resolve_references=True,
+    assets=None,
+):
     """Parses an XML string into an MJCF object model.
 
     Args:
@@ -51,14 +56,22 @@ def from_xml_string(xml_string, escape_separators=False,
       An `mjcf.RootElement`.
     """
     xml_root = etree.fromstring(xml_string)
-    return _parse(xml_root, escape_separators,
-                  model_dir=model_dir,
-                  resolve_references=resolve_references,
-                  assets=assets)
+    return _parse(
+        xml_root,
+        escape_separators,
+        model_dir=model_dir,
+        resolve_references=resolve_references,
+        assets=assets,
+    )
 
 
-def from_file(file_handle, escape_separators=False,
-              model_dir='', resolve_references=True, assets=None):
+def from_file(
+    file_handle,
+    escape_separators=False,
+    model_dir="",
+    resolve_references=True,
+    assets=None,
+):
     """Parses an XML file into an MJCF object model.
 
     Args:
@@ -78,14 +91,16 @@ def from_file(file_handle, escape_separators=False,
       An `mjcf.RootElement`.
     """
     xml_root = etree.parse(file_handle).getroot()
-    return _parse(xml_root, escape_separators,
-                  model_dir=model_dir,
-                  resolve_references=resolve_references,
-                  assets=assets)
+    return _parse(
+        xml_root,
+        escape_separators,
+        model_dir=model_dir,
+        resolve_references=resolve_references,
+        assets=assets,
+    )
 
 
-def from_path(path, escape_separators=False, resolve_references=True,
-              assets=None):
+def from_path(path, escape_separators=False, resolve_references=True, assets=None):
     """Parses an XML file into an MJCF object model.
 
     Args:
@@ -106,13 +121,22 @@ def from_path(path, escape_separators=False, resolve_references=True,
     model_dir, _ = os.path.split(path)
     contents = resources.GetResource(path)
     xml_root = etree.fromstring(contents)
-    return _parse(xml_root, escape_separators,
-                  model_dir=model_dir, resolve_references=resolve_references,
-                  assets=assets)
+    return _parse(
+        xml_root,
+        escape_separators,
+        model_dir=model_dir,
+        resolve_references=resolve_references,
+        assets=assets,
+    )
 
 
-def _parse(xml_root, escape_separators=False,
-           model_dir='', resolve_references=True, assets=None):
+def _parse(
+    xml_root,
+    escape_separators=False,
+    model_dir="",
+    resolve_references=True,
+    assets=None,
+):
     """Parses a complete MJCF model from an XML.
 
     Args:
@@ -137,28 +161,30 @@ def _parse(xml_root, escape_separators=False,
 
     assets = assets or {}
 
-    if xml_root.tag != 'mujoco':
-        raise ValueError('Root element of the XML should be <mujoco>: got <{}>'
-                         .format(xml_root.tag))
+    if xml_root.tag != "mujoco":
+        raise ValueError(
+            "Root element of the XML should be <mujoco>: got <{}>".format(xml_root.tag)
+        )
 
     with debugging.freeze_current_stack_trace():
         # Recursively parse any included XML files.
         to_include = []
-        for include_tag in xml_root.findall('include'):
+        for include_tag in xml_root.findall("include"):
             try:
                 # First look for the path to the included XML file in the assets dict.
-                path_or_xml_string = assets[include_tag.attrib['file']]
+                path_or_xml_string = assets[include_tag.attrib["file"]]
                 parsing_func = from_xml_string
             except KeyError:
                 # If it's not present in the assets dict then attempt to load the XML
                 # from the filesystem.
-                path_or_xml_string = os.path.join(model_dir, include_tag.attrib['file'])
+                path_or_xml_string = os.path.join(model_dir, include_tag.attrib["file"])
                 parsing_func = from_path
             included_mjcf = parsing_func(
                 path_or_xml_string,
                 escape_separators=escape_separators,
                 resolve_references=resolve_references,
-                assets=assets)
+                assets=assets,
+            )
             to_include.append(included_mjcf)
             # We must remove <include/> tags before parsing the main XML file, since
             # these are a schema violation.
@@ -166,11 +192,10 @@ def _parse(xml_root, escape_separators=False,
 
         # Parse the main XML file.
         try:
-            model = xml_root.attrib.pop('model')
+            model = xml_root.attrib.pop("model")
         except KeyError:
             model = None
-        mjcf_root = element.RootElement(
-            model=model, model_dir=model_dir, assets=assets)
+        mjcf_root = element.RootElement(model=model, model_dir=model_dir, assets=assets)
         _parse_children(xml_root, mjcf_root, escape_separators)
 
         # Merge in the included XML files.
@@ -205,9 +230,11 @@ def _parse_children(xml_element, mjcf_element, escape_separators=False):
                 for name, value in six.iteritems(xml_child.attrib):
                     new_value = value.replace(
                         constants.PREFIX_SEPARATOR_ESCAPE,
-                        constants.PREFIX_SEPARATOR_ESCAPE * 2)
+                        constants.PREFIX_SEPARATOR_ESCAPE * 2,
+                    )
                     new_value = new_value.replace(
-                        constants.PREFIX_SEPARATOR, constants.PREFIX_SEPARATOR_ESCAPE)
+                        constants.PREFIX_SEPARATOR, constants.PREFIX_SEPARATOR_ESCAPE
+                    )
                     attributes[name] = new_value
             else:
                 attributes = dict(xml_child.attrib)
@@ -218,7 +245,8 @@ def _parse_children(xml_element, mjcf_element, escape_separators=False):
                 mjcf_child.set_attributes(**attributes)
         except:  # pylint: disable=bare-except
             err_type, err, traceback = sys.exc_info()
-            message = ('Line {}: error while parsing element <{}>: {}'
-                       .format(xml_child.sourceline, xml_child.tag, err))
+            message = "Line {}: error while parsing element <{}>: {}".format(
+                xml_child.sourceline, xml_child.tag, err
+            )
             six.reraise(err_type, err_type(message), traceback)
         _parse_children(xml_child, mjcf_child, escape_separators)

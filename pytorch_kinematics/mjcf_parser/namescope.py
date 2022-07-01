@@ -36,7 +36,7 @@ class NameScope(object):
     the root namescope.
     """
 
-    def __init__(self, name, mjcf_model, model_dir='', assets=None):
+    def __init__(self, name, mjcf_model, model_dir="", assets=None):
         """Initializes a scope with the given name.
 
         Args:
@@ -63,7 +63,7 @@ class NameScope(object):
 
     def increment_revision(self):
         self._revision += 1
-        for namescope in six.itervalues(self._namespaces['namescope']):
+        for namescope in six.itervalues(self._namespaces["namescope"]):
             namescope.increment_revision()
 
     @property
@@ -89,8 +89,8 @@ class NameScope(object):
     @name.setter
     def name(self, new_name):
         if self._parent:
-            self._parent.add('namescope', new_name, self)
-            self._parent.remove('namescope', self._name)
+            self._parent.add("namescope", new_name, self)
+            self._parent.remove("namescope", self._name)
         self._name = new_name
         self.increment_revision()
 
@@ -106,10 +106,10 @@ class NameScope(object):
     @parent.setter
     def parent(self, new_parent):
         if self._parent:
-            self._parent.remove('namescope', self._name)
+            self._parent.remove("namescope", self._name)
         self._parent = new_parent
         if self._parent:
-            self._parent.add('namescope', self._name, self)
+            self._parent.add("namescope", self._name, self)
         self.increment_revision()
 
     @property
@@ -143,7 +143,7 @@ class NameScope(object):
             return prefix_list
         else:
             if prefix_list:
-                prefix_list.append('')
+                prefix_list.append("")
             return constants.PREFIX_SEPARATOR.join(prefix_list)
 
     def _assign(self, namespace, identifier, obj):
@@ -151,11 +151,14 @@ class NameScope(object):
         namespace_dict = self._namespaces[namespace]
         if not isinstance(identifier, str):
             raise ValueError(
-                'Identifier must be a string: got {}'.format(type(identifier)))
+                "Identifier must be a string: got {}".format(type(identifier))
+            )
         elif constants.PREFIX_SEPARATOR in identifier:
             raise ValueError(
-                'Identifier cannot contain {!r}: got {}'
-                    .format(constants.PREFIX_SEPARATOR, identifier))
+                "Identifier cannot contain {!r}: got {}".format(
+                    constants.PREFIX_SEPARATOR, identifier
+                )
+            )
         else:
             namespace_dict[identifier] = obj
 
@@ -173,8 +176,11 @@ class NameScope(object):
         """
         namespace_dict = self._namespaces[namespace]
         if identifier in namespace_dict:
-            raise ValueError('Duplicated identifier {!r} in namespace <{}>'
-                             .format(identifier, namespace))
+            raise ValueError(
+                "Duplicated identifier {!r} in namespace <{}>".format(
+                    identifier, namespace
+                )
+            )
         else:
             self._assign(namespace, identifier, obj)
         self.increment_revision()

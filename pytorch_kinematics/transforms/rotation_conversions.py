@@ -179,7 +179,7 @@ def euler_angles_to_matrix(euler_angles, convention: str):
 
 
 def _angle_from_tan(
-        axis: str, other_axis: str, data, horizontal: bool, tait_bryan: bool
+    axis: str, other_axis: str, data, horizontal: bool, tait_bryan: bool
 ):
     """
     Extract the first or third Euler angle from the two members of
@@ -263,7 +263,7 @@ def matrix_to_euler_angles(matrix, convention: str):
 
 
 def random_quaternions(
-        n: int, dtype: Optional[torch.dtype] = None, device=None, requires_grad=False
+    n: int, dtype: Optional[torch.dtype] = None, device=None, requires_grad=False
 ):
     """
     Generate random quaternions representing rotations,
@@ -287,7 +287,7 @@ def random_quaternions(
 
 
 def random_rotations(
-        n: int, dtype: Optional[torch.dtype] = None, device=None, requires_grad=False
+    n: int, dtype: Optional[torch.dtype] = None, device=None, requires_grad=False
 ):
     """
     Generate random rotations as 3x3 rotation matrices.
@@ -310,7 +310,7 @@ def random_rotations(
 
 
 def random_rotation(
-        dtype: Optional[torch.dtype] = None, device=None, requires_grad=False
+    dtype: Optional[torch.dtype] = None, device=None, requires_grad=False
 ):
     """
     Generate a single random 3x3 rotation matrix.
@@ -471,12 +471,12 @@ def axis_angle_to_quaternion(axis_angle):
     small_angles = angles.abs() < eps
     sin_half_angles_over_angles = torch.empty_like(angles)
     sin_half_angles_over_angles[~small_angles] = (
-            torch.sin(half_angles[~small_angles]) / angles[~small_angles]
+        torch.sin(half_angles[~small_angles]) / angles[~small_angles]
     )
     # for x small, sin(x/2) is about x/2 - (x/2)^3/6
     # so sin(x/2)/x is about 1/2 - (x*x)/48
     sin_half_angles_over_angles[small_angles] = (
-            0.5 - (angles[small_angles] * angles[small_angles]) / 48
+        0.5 - (angles[small_angles] * angles[small_angles]) / 48
     )
     quaternions = torch.cat(
         [torch.cos(half_angles), axis_angle * sin_half_angles_over_angles], dim=-1
@@ -505,12 +505,12 @@ def quaternion_to_axis_angle(quaternions):
     small_angles = angles.abs() < eps
     sin_half_angles_over_angles = torch.empty_like(angles)
     sin_half_angles_over_angles[~small_angles] = (
-            torch.sin(half_angles[~small_angles]) / angles[~small_angles]
+        torch.sin(half_angles[~small_angles]) / angles[~small_angles]
     )
     # for x small, sin(x/2) is about x/2 - (x/2)^3/6
     # so sin(x/2)/x is about 1/2 - (x*x)/48
     sin_half_angles_over_angles[small_angles] = (
-            0.5 - (angles[small_angles] * angles[small_angles]) / 48
+        0.5 - (angles[small_angles] * angles[small_angles]) / 48
     )
     return quaternions[..., 1:] / sin_half_angles_over_angles
 

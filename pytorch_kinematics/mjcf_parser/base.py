@@ -35,4 +35,5 @@ class Element(object):
     orphaned non-root elements, so when a particular element is removed from the
     tree, all references held automatically become invalid.
     """
+
     __slots__ = []

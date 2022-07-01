@@ -7,8 +7,12 @@ from typing import Optional
 
 import torch
 
-from .rotation_conversions import _axis_angle_rotation, matrix_to_quaternion, quaternion_to_matrix, \
-    euler_angles_to_matrix
+from .rotation_conversions import (
+    _axis_angle_rotation,
+    matrix_to_quaternion,
+    quaternion_to_matrix,
+    euler_angles_to_matrix,
+)
 
 DEFAULT_EULER_CONVENTION = "XYZ"
 
@@ -142,13 +146,13 @@ class Transform3d:
     """
 
     def __init__(
-            self,
-            default_batch_size=1,
-            dtype: torch.dtype = torch.float32,
-            device='cpu',
-            matrix: Optional[torch.Tensor] = None,
-            rot: Optional[typing.Iterable] = None,
-            pos: Optional[typing.Iterable] = None,
+        self,
+        default_batch_size=1,
+        dtype: torch.dtype = torch.float32,
+        device="cpu",
+        matrix: Optional[torch.Tensor] = None,
+        rot: Optional[typing.Iterable] = None,
+        pos: Optional[typing.Iterable] = None,
     ):
         """
         Args:
@@ -172,7 +176,11 @@ class Transform3d:
                 matrix argument, if any.
         """
         if matrix is None:
-            self._matrix = torch.eye(4, dtype=dtype, device=device).unsqueeze(0).repeat(default_batch_size, 1, 1)
+            self._matrix = (
+                torch.eye(4, dtype=dtype, device=device)
+                .unsqueeze(0)
+                .repeat(default_batch_size, 1, 1)
+            )
         else:
             if matrix.ndim not in (2, 3):
                 raise ValueError('"matrix" has to be a 2- or a 3-dimensional tensor.')
@@ -214,7 +222,7 @@ class Transform3d:
         m = self.get_matrix()
         pos = m[:, :3, 3]
         rot = matrix_to_quaternion(m[:, :3, :3])
-        return "Transform3d(rot={}, pos={})".format(rot, pos).replace('\n       ', '')
+        return "Transform3d(rot={}, pos={})".format(rot, pos).replace("\n       ", "")
 
     def compose(self, *others):
         """
@@ -443,13 +451,19 @@ class Transform3d:
         Returns:
           Transform3d object.
         """
-        if not copy and (dtype is None or self.dtype == dtype) and self.device == device:
+        if (
+            not copy
+            and (dtype is None or self.dtype == dtype)
+            and self.device == device
+        ):
             return self
         other = self.clone()
         other.device = device
         other.dtype = dtype if dtype is not None else other.dtype
         other._matrix = self._matrix.to(device=device, dtype=dtype)
-        other._transforms = [t.to(device, copy=copy, dtype=dtype) for t in other._transforms]
+        other._transforms = [
+            t.to(device, copy=copy, dtype=dtype) for t in other._transforms
+        ]
         return other
 
     def cpu(self):
@@ -535,7 +549,7 @@ class Scale(Transform3d):
 
 class Rotate(Transform3d):
     def __init__(
-            self, R, dtype=torch.float32, device: str = "cpu", orthogonal_tol: float = 1e-5
+        self, R, dtype=torch.float32, device: str = "cpu", orthogonal_tol: float = 1e-5
     ):
         """
         Create a new Transform3d representing 3D rotation using a rotation
@@ -577,12 +591,12 @@ class Rotate(Transform3d):
 
 class RotateAxisAngle(Rotate):
     def __init__(
-            self,
-            angle,
-            axis: str = "X",
-            degrees: bool = True,
-            dtype=torch.float64,
-            device: str = "cpu",
+        self,
+        angle,
+        axis: str = "X",
+        degrees: bool = True,
+        dtype=torch.float64,
+        device: str = "cpu",
     ):
         """
         Create a new Transform3d representing 3D rotation about an axis

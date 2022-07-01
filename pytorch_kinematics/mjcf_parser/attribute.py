@@ -35,16 +35,18 @@ import numpy as np
 from . import io as resources
 
 _INVALID_REFERENCE_TYPE = (
-    'Reference should be an MJCF Element whose type is one of {valid_types!r}: '
-    'got {actual_type!r}.')
+    "Reference should be an MJCF Element whose type is one of {valid_types!r}: "
+    "got {actual_type!r}."
+)
 
 
 @six.add_metaclass(abc.ABCMeta)
 class _Attribute(object):
     """Abstract base class for MJCF attribute data types."""
 
-    def __init__(self, name, required, parent, value,
-                 conflict_allowed, conflict_behavior):
+    def __init__(
+        self, name, required, parent, value, conflict_allowed, conflict_behavior
+    ):
         self._name = name
         self._required = required
         self._parent = parent
@@ -83,8 +85,10 @@ class _Attribute(object):
     def clear(self):
         if self._required:
             raise AttributeError(
-                'Attribute {!r} of element <{}> is required'
-                    .format(self._name, self._parent.tag))
+                "Attribute {!r} of element <{}> is required".format(
+                    self._name, self._parent.tag
+                )
+            )
         else:
             self._force_clear()
 
@@ -120,7 +124,7 @@ class String(_Attribute):
 
     def _assign(self, value):
         if not isinstance(value, str):
-            raise ValueError('Expect a string value: got {}'.format(value))
+            raise ValueError("Expect a string value: got {}".format(value))
         elif not value:
             self.clear()
         else:
@@ -137,7 +141,7 @@ class Integer(_Attribute):
             if float_value != int_value:
                 raise ValueError
         except ValueError:
-            raise ValueError('Expect an integer value: got {}'.format(value))
+            raise ValueError("Expect an integer value: got {}".format(value))
         self._value = int_value
 
 
@@ -148,19 +152,29 @@ class Float(_Attribute):
         try:
             float_value = float(value)
         except ValueError:
-            raise ValueError('Expect a float value: got {}'.format(value))
+            raise ValueError("Expect a float value: got {}".format(value))
         self._value = float_value
 
 
 class Keyword(_Attribute):
     """A keyword MJCF attribute."""
 
-    def __init__(self, name, required, parent, value,
-                 conflict_allowed, conflict_behavior, valid_values):
+    def __init__(
+        self,
+        name,
+        required,
+        parent,
+        value,
+        conflict_allowed,
+        conflict_behavior,
+        valid_values,
+    ):
         self._valid_values = collections.OrderedDict(
-            (value.lower(), value) for value in valid_values)
+            (value.lower(), value) for value in valid_values
+        )
         super(Keyword, self).__init__(
-            name, required, parent, value, conflict_allowed, conflict_behavior)
+            name, required, parent, value, conflict_allowed, conflict_behavior
+        )
 
     def _assign(self, value):
         if not value:
@@ -169,8 +183,11 @@ class Keyword(_Attribute):
             try:
                 self._value = self._valid_values[str(value).lower()]
             except KeyError:
-                raise ValueError('Expect keyword to be one of {} but got: {}'.format(
-                    list(self._valid_values.values()), value))
+                raise ValueError(
+                    "Expect keyword to be one of {} but got: {}".format(
+                        list(self._valid_values.values()), value
+                    )
+                )
 
     @property
     def valid_values(self):
@@ -180,19 +197,32 @@ class Keyword(_Attribute):
 class Array(_Attribute):
     """An array MJCF attribute."""
 
-    def __init__(self, name, required, parent, value,
-                 conflict_allowed, conflict_behavior, length, dtype, device="cpu"):
+    def __init__(
+        self,
+        name,
+        required,
+        parent,
+        value,
+        conflict_allowed,
+        conflict_behavior,
+        length,
+        dtype,
+        device="cpu",
+    ):
         self._length = length
         self.dtype = dtype
         self.device = device
-        super(Array, self).__init__(name, required, parent, value,
-                                    conflict_allowed, conflict_behavior)
+        super(Array, self).__init__(
+            name, required, parent, value, conflict_allowed, conflict_behavior
+        )
 
     def _assign(self, value):
-        self._value = self._check_shape(torch.tensor(value, dtype=self.dtype, device=self.device))
+        self._value = self._check_shape(
+            torch.tensor(value, dtype=self.dtype, device=self.device)
+        )
 
     def _assign_from_string(self, string):
-        self._assign(np.fromstring(string, dtype=self.dtype, sep=' '))
+        self._assign(np.fromstring(string, dtype=self.dtype, sep=" "))
 
     def to_xml_string(self, prefix_root=None):  # pylint: disable=unused-argument
         if self._value is None:
@@ -202,16 +232,19 @@ class Array(_Attribute):
             # 17 decimal digits is sufficient to represent a double float without loss
             # of precision.
             # https://en.wikipedia.org/wiki/IEEE_754#Character_representation
-            np.savetxt(out, self._value, fmt='%.17g', newline=' ')
+            np.savetxt(out, self._value, fmt="%.17g", newline=" ")
             return util.to_native_string(out.getvalue())[:-1]  # Strip trailing space.
 
     def _check_shape(self, array):
         actual_length = array.shape[0]
         if len(array.shape) > 1:
-            raise ValueError('Expect one-dimensional array: got {}'.format(array))
+            raise ValueError("Expect one-dimensional array: got {}".format(array))
         if self._length and actual_length > self._length:
-            raise ValueError('Expect array with no more than {} entries: got {}'
-                             .format(self._length, array))
+            raise ValueError(
+                "Expect array with no more than {} entries: got {}".format(
+                    self._length, array
+                )
+            )
         return array
 
 
@@ -220,25 +253,32 @@ class Identifier(_Attribute):
 
     def _assign(self, value):
         if not isinstance(value, str):
-            raise ValueError('Expect a string value: got {}'.format(value))
+            raise ValueError("Expect a string value: got {}".format(value))
         elif not value:
             self.clear()
-        elif self._parent.spec.namespace == 'body' and value == 'world':
-            raise ValueError('A body cannot be named \'world\'. '
-                             'The name \'world\' is used by MuJoCo to refer to the '
-                             '<worldbody>.')
+        elif self._parent.spec.namespace == "body" and value == "world":
+            raise ValueError(
+                "A body cannot be named 'world'. "
+                "The name 'world' is used by MuJoCo to refer to the "
+                "<worldbody>."
+            )
         elif constants.PREFIX_SEPARATOR in value:
             raise ValueError(
-                'An identifier cannot contain a {!r}, '
-                'as this is reserved for scoping purposes: got {!r}'
-                    .format(constants.PREFIX_SEPARATOR, value))
+                "An identifier cannot contain a {!r}, "
+                "as this is reserved for scoping purposes: got {!r}".format(
+                    constants.PREFIX_SEPARATOR, value
+                )
+            )
         else:
             old_value = self._value
             if value != old_value:
                 self._parent.namescope.add(
-                    self._parent.spec.namespace, value, self._parent)
+                    self._parent.spec.namespace, value, self._parent
+                )
                 if old_value:
-                    self._parent.namescope.remove(self._parent.spec.namespace, old_value)
+                    self._parent.namescope.remove(
+                        self._parent.spec.namespace, old_value
+                    )
             self._value = value
 
     def _before_clear(self):
@@ -247,7 +287,7 @@ class Identifier(_Attribute):
 
     def _defaults_string(self, prefix_root):
         prefix = self._parent.namescope.full_prefix(prefix_root, as_list=True)
-        prefix.append(self._value or '')
+        prefix.append(self._value or "")
         return constants.PREFIX_SEPARATOR.join(prefix) or constants.PREFIX_SEPARATOR
 
     def to_xml_string(self, prefix_root=None):
@@ -264,11 +304,20 @@ class Identifier(_Attribute):
 class Reference(_Attribute):
     """A string attribute that represents a reference to an identifier."""
 
-    def __init__(self, name, required, parent, value,
-                 conflict_allowed, conflict_behavior, reference_namespace):
+    def __init__(
+        self,
+        name,
+        required,
+        parent,
+        value,
+        conflict_allowed,
+        conflict_behavior,
+        reference_namespace,
+    ):
         self._reference_namespace = reference_namespace
         super(Reference, self).__init__(
-            name, required, parent, value, conflict_allowed, conflict_behavior)
+            name, required, parent, value, conflict_allowed, conflict_behavior
+        )
 
     def _check_dead_reference(self):
         if isinstance(self._value, base.Element) and self._value.is_removed:
@@ -293,24 +342,32 @@ class Reference(_Attribute):
     def _assign(self, value):
         if not isinstance(value, (base.Element, six.string_types)):
             raise ValueError(
-                'Expect a string or `mjcf.Element` value: got {}'.format(value))
+                "Expect a string or `mjcf.Element` value: got {}".format(value)
+            )
         elif not value:
             self.clear()
         else:
             if isinstance(value, base.Element):
-                value_namespace = (
-                    value.spec.namespace.split(constants.NAMESPACE_SEPARATOR)[0])
+                value_namespace = value.spec.namespace.split(
+                    constants.NAMESPACE_SEPARATOR
+                )[0]
                 if isinstance(self._reference_namespace, _Attribute):
                     try:
                         self._reference_namespace.value = value_namespace
                     except ValueError:
-                        raise ValueError(_INVALID_REFERENCE_TYPE.format(
-                            valid_types=self._reference_namespace.valid_values,
-                            actual_type=value_namespace))
+                        raise ValueError(
+                            _INVALID_REFERENCE_TYPE.format(
+                                valid_types=self._reference_namespace.valid_values,
+                                actual_type=value_namespace,
+                            )
+                        )
                 elif value_namespace != self._reference_namespace:
-                    raise ValueError(_INVALID_REFERENCE_TYPE.format(
-                        valid_types=[self._reference_namespace],
-                        actual_type=value_namespace))
+                    raise ValueError(
+                        _INVALID_REFERENCE_TYPE.format(
+                            valid_types=[self._reference_namespace],
+                            actual_type=value_namespace,
+                        )
+                    )
             self._value = value
 
     def _before_clear(self):
@@ -339,13 +396,15 @@ class Reference(_Attribute):
         if not self._value:
             defaults_root = self._parent.parent
             while defaults_root is not None:
-                if (hasattr(defaults_root, constants.CHILDCLASS)
-                        and defaults_root.childclass):
+                if (
+                    hasattr(defaults_root, constants.CHILDCLASS)
+                    and defaults_root.childclass
+                ):
                     break
                 defaults_root = defaults_root.parent
             if defaults_root is None:
                 # This element doesn't belong to a childclass'd body.
-                global_class = self._parent.root.default.dclass or ''
+                global_class = self._parent.root.default.dclass or ""
                 out_string = (prefix + global_class) or constants.PREFIX_SEPARATOR
             else:
                 out_string = None
@@ -357,8 +416,10 @@ class Reference(_Attribute):
         self._check_dead_reference()
         if isinstance(self._value, base.Element):
             return self._value.prefixed_identifier(prefix_root)
-        elif (self.reference_namespace == constants.DEFAULT
-              and self._name != constants.CHILDCLASS):
+        elif (
+            self.reference_namespace == constants.DEFAULT
+            and self._name != constants.CHILDCLASS
+        ):
             return self._defaults_string(prefix_root)
         elif self._value:
             return self._parent.namescope.full_prefix(prefix_root) + self._value
@@ -369,20 +430,30 @@ class Reference(_Attribute):
 class BasePath(_Attribute):
     """A string attribute that represents a base path for an asset type."""
 
-    def __init__(self, name, required, parent, value,
-                 conflict_allowed, conflict_behavior, path_namespace):
+    def __init__(
+        self,
+        name,
+        required,
+        parent,
+        value,
+        conflict_allowed,
+        conflict_behavior,
+        path_namespace,
+    ):
         self._path_namespace = path_namespace
         super(BasePath, self).__init__(
-            name, required, parent, value, conflict_allowed, conflict_behavior)
+            name, required, parent, value, conflict_allowed, conflict_behavior
+        )
 
     def _assign(self, value):
         if not isinstance(value, str):
-            raise ValueError('Expect a string value: got {}'.format(value))
+            raise ValueError("Expect a string value: got {}".format(value))
         elif not value:
             self.clear()
         else:
             self._parent.namescope.replace(
-                constants.BASEPATH, self._path_namespace, value)
+                constants.BASEPATH, self._path_namespace, value
+            )
             self._value = value
 
     def _before_clear(self):
@@ -396,9 +467,9 @@ class BasePath(_Attribute):
 class Asset(object):
     """Class representing a binary asset."""
 
-    __slots__ = ('contents', 'extension', 'prefix')
+    __slots__ = ("contents", "extension", "prefix")
 
-    def __init__(self, contents, extension, prefix=''):
+    def __init__(self, contents, extension, prefix=""):
         """Initializes a new `Asset`.
 
         Args:
@@ -424,7 +495,7 @@ class Asset(object):
             if raw_length > constants.MAX_VFS_FILENAME_LENGTH:
                 trim_amount = raw_length - constants.MAX_VFS_FILENAME_LENGTH
                 prefix = prefix[:-trim_amount]
-            filename = '-'.join([prefix, hash_string])
+            filename = "-".join([prefix, hash_string])
         else:
             filename = hash_string
 
@@ -436,11 +507,20 @@ class Asset(object):
 class File(_Attribute):
     """Attribute representing an asset file."""
 
-    def __init__(self, name, required, parent, value,
-                 conflict_allowed, conflict_behavior, path_namespace):
+    def __init__(
+        self,
+        name,
+        required,
+        parent,
+        value,
+        conflict_allowed,
+        conflict_behavior,
+        path_namespace,
+    ):
         self._path_namespace = path_namespace
-        super(File, self).__init__(name, required, parent, value,
-                                   conflict_allowed, conflict_behavior)
+        super(File, self).__init__(
+            name, required, parent, value, conflict_allowed, conflict_behavior
+        )
         parent.namescope.files.add(self)
 
     def _assign(self, value):
@@ -452,8 +532,9 @@ class File(_Attribute):
             elif isinstance(value, Asset):
                 asset = value
             else:
-                raise ValueError('Expect either a string or `Asset` value: got {}'
-                                 .format(value))
+                raise ValueError(
+                    "Expect either a string or `Asset` value: got {}".format(value)
+                )
             self._validate_extension(asset.extension)
             self._value = asset
 
@@ -472,8 +553,9 @@ class File(_Attribute):
             if self._parent.namescope.model_dir:
                 path_parts.append(self._parent.namescope.model_dir)
             try:
-                base_path = self._parent.namescope.get(constants.BASEPATH,
-                                                       self._path_namespace)
+                base_path = self._parent.namescope.get(
+                    constants.BASEPATH, self._path_namespace
+                )
                 path_parts.append(base_path)
             except KeyError:
                 pass
@@ -484,15 +566,17 @@ class File(_Attribute):
 
     def _validate_extension(self, extension):
         if self._parent.tag == constants.MESH:
-            if extension.lower() != '.stl':
+            if extension.lower() != ".stl":
                 # MuJoCo's compiler enforces this.
-                raise ValueError('Mesh files must have the extension \'.stl\'.')
+                raise ValueError("Mesh files must have the extension '.stl'.")
 
     def get_contents(self):
         """Returns a bytestring representing the contents of the asset."""
         if self._value is None:
-            raise RuntimeError('You must assign a value to this attribute before '
-                               'querying the contents.')
+            raise RuntimeError(
+                "You must assign a value to this attribute before "
+                "querying the contents."
+            )
         return self._value.contents
 
     def to_xml_string(self, prefix_root=None):
