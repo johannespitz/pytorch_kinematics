@@ -50,12 +50,12 @@ def calc_jacobian(serial_chain, th, tool=None):
         cur_transform = cur_transform @ cur_frame_transform
         if f.joint.joint_type == "revolute":
             delta = final_pos - cur_transform[:, :3, 3]
-            angles = f.joint.axis.repeat(N) @ cur_transform[:, :3, :3]
+            angles = f.joint.axis @ cur_transform[:, :3, :3]
             position = torch.cross(angles, delta)
             j_fl[:, :, cnt] = torch.cat((position, angles), dim=-1)
             cnt += 1
         elif f.joint.joint_type == "prismatic":
-            j_fl[:, :3, cnt] = f.joint.axis.repeat(N, 1) @ cur_transform[:, :3, :3]
+            j_fl[:, :3, cnt] = f.joint.axis @ cur_transform[:, :3, :3]
             cnt += 1
 
     return j_fl
